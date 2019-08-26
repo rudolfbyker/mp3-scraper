@@ -50,25 +50,29 @@ def wait():
     time.sleep(t)
 
 
-def list_pages(url, domain):
+def list_pages(domain, path, query):
     while True:
+        url = domain + path + query
         soup = BeautifulSoup(get_html(url), 'html.parser')
         yield soup
 
-        a = soup.find('a', {'rel': 'next'})
+        pagination = soup.find(id='pagination')
+        current_page = int(pagination.find(class_='current page').string)
+        next_page = current_page + 1
+        a = pagination.find('a', text=str(next_page))
         if a is None:
             return
         else:
-            url = domain + a.attrs['href']
+            query = a.attrs['href']
 
 
 def sermon_pages(soup, domain):
-    for a in soup.find_all('a', {'class': 'card__shadow'}):
+    for a in soup.select('ul.resource-list li.sermon .read-more-link a'):
         yield BeautifulSoup(get_html(domain + a.attrs['href']), 'html.parser')
 
 
 def find_mp3(soup):
-    m = soup.select('a[href$=mp3]')
+    m = soup.select('a.download')
     return m[0].attrs['href']
 
 
@@ -83,3 +87,7 @@ def safe_title(unsafe_title):
     """
     sub = re_non_word.sub(' ', unsafe_title)
     return '-'.join(sub.split()).strip().lower()
+
+
+def extract_sermon_title(sermon_soup):
+    return sermon_soup.h1.text
